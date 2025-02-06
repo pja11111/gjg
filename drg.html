@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="newtdl.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <title>To-Do List</title>
+  </head>
+  <body>
+    <div class="container">
+      <h2>To-Do List</h2>
+      <div class="input-group">
+        <input type="text" id="fieldName" placeholder="Task name" />
+        <input
+          type="text"
+          id="fielddescription"
+          placeholder="Task description"
+        />
+        <button onclick="addTask()">Add</button>
+      </div>
+      <ul id="taskList"></ul>
+      <div class="mycontainer">
+        <h2>My Check</h2>
+        <ul id="mylist"></ul>
+        <div class="bulk-actions">
+          <button onclick="showBulkDeleteModal()">bulkDelete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- popup delete -->
+    <div id="deleteModal" class="modal">
+      <div class="modal-content">
+        <p>แน่ใจหรือไม่ว่าต้องการลบ <b id="deleteTaskName"></b>?</p>
+        <p>กรุณาพิมพ์ <b>"confirm"</b> เพื่อยืนยัน</p>
+        <input
+          type="text"
+          id="confirmDeleteInput"
+          placeholder="พิมพ์ confirm ที่นี่"
+        />
+        <br /><br />
+        <button onclick="confirmDeleteTask()" class="confirm-btn">
+          Confirm
+        </button>
+        <button onclick="closeDeleteModal()" class="cancel-btn">Cancel</button>
+      </div>
+    </div>
+    <!-- popup bulk -->
+    <div id="bulkDeleteModal" class="modal">
+      <div class="modal-content">
+        <p>แน่ใจไหมที่จะลบ Task ที่ยังไม่เสร็จทั้งหมด?</p>
+        <p>กรุณาพิมพ์ <b>"confirm"</b> เพื่อยืนยันการลบ</p>
+        <input
+          type="text"
+          id="bulkConfirmInput"
+          placeholder="พิมพ์ confirm ที่นี่"
+        />
+        <br /><br />
+        <button onclick="confirmBulkDelete()" class="confirm-btn">
+          Confirm
+        </button>
+        <button onclick="closeBulkDeleteModal()" class="cancel-btn">
+          Cancel
+        </button>
+      </div>
+    </div>
+
+    <script>
+      const defaultData = [
+        { id: 100, taskname: "Task1", description: "test1", completed: false },
+        { id: 101, taskname: "Task2", description: "test2", completed: false },
+        { id: 102, taskname: "Task3", description: "test3", completed: false },
+      ];
+
+      const storedTasks = localStorage.getItem("tasks");
+
+      let tasks;
+      if (storedTasks) {
+        tasks = JSON.parse(storedTasks);
+      } else {
+        tasks = [...defaultData];
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+      }
+
+      function addTask() {
+        const name = document.getElementById("fieldName").value.trim();
+        const des = document.getElementById("fielddescription").value.trim();
+
+        if (!name || !des) {
+          alert("Please enter both task name and description.");
+          return;
+        }
+
+        const newTask = {
+          id: tasks.length > 0 ? tasks[tasks.length - 1].id + 1 : 1,
+          taskname: name,
+          description: des,
+          completed: false,
+        };
+
+        tasks.push(newTask);
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+        saveAndRender();
+
+        document.getElementById("fieldName").value = "";
+        document.getElementById("fielddescription").value = "";
+      }
+
+      // ส่วนของdelete
+      let taskToDeleteId = null;
+      function openDeleteModal(id) {
+        taskToDeleteId = id;
+        document.getElementById("deleteModal").style.display = "flex";
+      }
+      function closeDeleteModal() {
+        document.getElementById("deleteModal").style.display = "none";
+        document.getElementById("confirmDeleteInput").value = "";
+        taskToDeleteId = null;
+      }
+      function confirmDeleteTask() {
+        const confirmInput = document
+          .getElementById("confirmDeleteInput")
+          .value.trim()
+          .toLowerCase();
+        if (confirmInput !== "confirm") {
+          alert("กรุณาพิมพ์ 'confirm' ให้ถูกต้องก่อนลบ Task!");
+          return;
+        }
+        const newTasks = [];
+        for (let i = 0; i < tasks.length; i++) {
+          if (tasks[i].id !== taskToDeleteId) {
+            newTasks.push(tasks[i]);
+          }
+        }
+        tasks = newTasks;
+        saveAndRender();
+        closeDeleteModal();
+      }
+
+      // ส่วนของcheckbox
+      function toggleTask(id) {
+        for (let i = 0; i < tasks.length; i++) {
+          // เช็ค task ที่ index i ว่ามี id ตรงกับ id ที่ระบุไหม
+          if (tasks[i].id === id) {
+            // ถ้า id ตรงกัน
+            if (tasks[i].completed) {
+              // ถ้า task นั้นมีcompleted เป็น true
+              tasks[i].completed = false; // เปลี่ยนเป็น false
+            } else {
+              // ถ้า task นั้นมีcompleted เป็น false
+              tasks[i].completed = true; // เปลี่ยนเป็น true
+            }
+            saveAndRender(); // บันทึกและแสดงผลใหม่
+            return; // หยุดลูปเมื่อเจอ task ที่ต้องการ
+          } else {
+            // ถ้าidไม่ตรงกันให้ข้ามไป
+            continue;
+          }
+        }
+      }
+
+      function showBulkDeleteModal() {
+        document.getElementById("bulkDeleteModal").style.display = "flex";
+      }
+      function closeBulkDeleteModal() {
+        document.getElementById("bulkDeleteModal").style.display = "none";
+        document.getElementById("bulkConfirmInput").value = "";
+      }
+      function confirmBulkDelete() {
+        const confirmInput = document
+          .getElementById("bulkConfirmInput")
+          .value.trim()
+          .toLowerCase();
+        if (confirmInput !== "confirm") {
+          alert("กรุณาพิมพ์ 'confirm' ให้ถูกต้องก่อนลบ Task!");
+          return;
+        }
+        const newTasks = [];
+        for (let i = 0; i < tasks.length; i++) {
+          if (!tasks[i].completed) {
+            newTasks.push(tasks[i]);
+            
+          }
+        }
+        tasks = newTasks;
+        saveAndRender();
+        closeBulkDeleteModal();
+      }
+
+      function saveAndRender() {
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+        render();
+        renderMyCheck();
+      }
+
+
+      // ส่วนของrender ui
+      function render() {
+        const taskList = document.getElementById("taskList");
+        taskList.innerHTML = "";
+        tasks.filter((task) => !task.completed)
+          .forEach((task) => {
+            const li = document.createElement("li");
+            li.className = `task${task.completed ? " completed" : ""}`;
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.dataset.id = task.id;
+            checkbox.checked = task.completed;
+
+            const textSpan = document.createElement("span");
+            textSpan.innerHTML = `
+            <div class="taskname">${task.taskname}</div>
+            <div class="taskdescription">${task.description}</div>
+          `;
+            textSpan.title = `${task.taskname}\n${task.description}`;
+
+            const deleteButton = document.createElement("button");
+            deleteButton.innerHTML =
+              '<i class="fa-solid fa-trash-can" style="color: red;"></i>';
+            deleteButton.onclick = () => openDeleteModal(task.id);
+
+            li.append(checkbox, textSpan, deleteButton);
+            taskList.appendChild(li);
+          });
+      }
+
+      // ส่วนของrender mycheck
+      function renderMyCheck() {
+        const myList = document.getElementById("mylist");
+        myList.innerHTML = "";
+        myList.className = "myList"
+        tasks.filter((task) => task.completed)
+          .forEach((task) => {
+            const li = document.createElement("li");
+            li.className = `task${task.completed ? " completed" : ""}`;
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.dataset.id = task.id;
+            checkbox.checked = task.completed;
+
+            const textSpan = document.createElement("span");
+            textSpan.innerHTML = `
+            <div class="taskname">${task.taskname}</div>
+            <div class="taskdescription">${task.description}</div>
+          `;
+            textSpan.title = `${task.taskname}\n${task.description}`;
+
+            const deleteButton = document.createElement("button");
+            deleteButton.innerHTML =
+              '<i class="fa-solid fa-trash-can" style="color: red;"></i>';
+            deleteButton.onclick = () => openDeleteModal(task.id);
+
+            li.append(checkbox, textSpan, deleteButton);
+            myList.appendChild(li);
+          });
+      }
+
+      document
+        .getElementById("taskList")
+        .addEventListener("click", function (event) {
+          const target = event.target;
+          if (target.tagName === "INPUT" && target.type === "checkbox") {
+            toggleTask(parseInt(target.dataset.id));
+          }
+        });
+
+      document
+        .getElementById("mylist")
+        .addEventListener("click", function (event) {
+          const target = event.target;
+          if (target.tagName === "INPUT" && target.type === "checkbox") {
+            toggleTask(parseInt(target.dataset.id));
+          }
+        });
+
+      render();
+      renderMyCheck();
+    </script>
+  </body>
+</html>
